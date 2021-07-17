@@ -37,7 +37,15 @@ This is usually caused by one of the following reason:
 </ul>
 """
 
-
+def get_client_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    elif request.META.get('HTTP_X_REAL_IP'):
+        ip = request.META.get('HTTP_X_REAL_IP')
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
 
 def wims_class(request: HttpRequest, wims_pk: int) -> HttpResponse:
     """Redirect the client to the WIMS server corresponding to <pk>.
@@ -97,7 +105,7 @@ def wims_class(request: HttpRequest, wims_pk: int) -> HttpResponse:
         user_db, user = get_or_create_user(wclass_db, wclass, parameters)
         
         # Trying to authenticate the user on the WIMS server
-        bol, response = wapi.authuser(wclass.qclass, wclass.rclass, user.quser)
+        bol, response = wapi.authuser(wclass.qclass, wclass.rclass, user.quser, ip = get_client_ip(request))
         if not bol:  # pragma: no cover
             raise wimsapi.WimsAPIError(response['message'])
         url = response["home_url"] + ("&lang=%s" % wclass.lang)
@@ -220,7 +228,7 @@ def wims_sheet(request: HttpRequest, wims_pk: int, sheet_pk: int) -> HttpRespons
             GradeLinkSheet.send_back_all(sheet_db)
         
         # Trying to authenticate the user on the WIMS server
-        bol, response = wapi.authuser(wclass.qclass, wclass.rclass, user.quser)
+        bol, response = wapi.authuser(wclass.qclass, wclass.rclass, user.quser, ip = get_client_ip(request))
         if not bol:  # pragma: no cover
             raise wimsapi.WimsAPIError(response['message'])
         
@@ -345,7 +353,7 @@ def wims_exam(request: HttpRequest, wims_pk: int, exam_pk: int) -> HttpResponse:
             GradeLinkExam.send_back_all(exam_db)
         
         # Trying to authenticate the user on the WIMS server
-        bol, response = wapi.authuser(wclass.qclass, wclass.rclass, user.quser)
+        bol, response = wapi.authuser(wclass.qclass, wclass.rclass, user.quser, ip = get_client_ip(request))
         if not bol:  # pragma: no cover
             raise wimsapi.WimsAPIError(response['message'])
         
